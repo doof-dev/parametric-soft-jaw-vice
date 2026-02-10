@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Parametric Woodworking Soft Jaws</title>
+  <script src="https://unpkg.com/@jscad/modeling@2.10.0/dist/index.min.js"></script>
+  <script src="https://unpkg.com/@jscad/regl-renderer@2.10.0/dist/index.min.js"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; background: #f4f4f4; }
+    #controls { width: 300px; padding: 20px; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; overflow-y: auto; }
+    #viewer { flex-grow: 1; position: relative; background: #222; }
+    .input-group { margin-bottom: 15px; }
+    label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
+    input { width: 100%; }
+    button { background: #007bff; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #0056b3; }
+    h2 { font-size: 18px; margin-top: 0; }
+  </style>
+</head>
+<body>
+
+<div id="controls">
+  <h2>Vise Jaw Generator</h2>
+  <div class="input-group">
+    <label>Jaw Width (mm)</label>
+    <input type="range" id="width" min="100" max="400" value="200">
+    <span id="widthVal">200</span>
+  </div>
+  <div class="input-group">
+    <label>Jaw Height (mm)</label>
+    <input type="range" id="height" min="50" max="200" value="100">
+    <span id="heightVal">100</span>
+  </div>
+  <div class="input-group">
+    <label>Hole Spacing (mm)</label>
+    <input type="range" id="spacing" min="50" max="350" value="120">
+    <span id="spacingVal">120</span>
+  </div>
+  <div class="input-group">
+    <label>Hole Diameter (mm)</label>
+    <input type="number" id="holeD" value="8">
+  </div>
+  <hr>
+  <button onclick="downloadSTL()">Download STL File</button>
+  <p style="font-size: 11px; color: #888; margin-top: 20px;">
+    Adjust sliders to match your woodworking vise. Bolt holes include a standard counterbore.
+  </p>
+</div>
+
+<div id="viewer"></div>
+
+<script>
+  // This is where the 3D logic lives
+  // Using OpenJSCAD syntax to build the jaw
+  function generateModel(params) {
+    const { primitives, booleans, transforms } = jscadModeling;
+    
+    // Main Block
+    let jaw = primitives.cuboid({ size: [params.width, 25, params.height] });
+
+    // Bolt Holes
+    const hole = primitives.cylinder({ radius: params.holeD / 2, height: 30 });
+    const counter = primitives.cylinder({ radius: (params.holeD * 1.5) / 2, height: 10 });
+    
+    const boltHole = booleans.union(
+      hole,
+      transforms.translate([0, 0, 10], counter)
+    );
+
+    const hole1 = transforms.translate([params.spacing / 2, 0, 0], transforms.rotateX(Math.PI/2, boltHole));
+    const hole2 = transforms.translate([-params.spacing / 2, 0, 0], transforms.rotateX(Math.PI/2, boltHole));
+
+    return booleans.subtract(jaw, hole1, hole2);
+  }
+
+  // UI and Rendering Logic (Simplified for this example)
+  // In a real app, you'd use the jscad-renderer here.
+  // For the sake of this prototype, we'll focus on the data flow.
+  
+  const inputs = ['width', 'height', 'spacing'];
+  inputs.forEach(id => {
+    document.getElementById(id).oninput = (e) => {
+      document.getElementById(id + 'Val').innerText = e.target.value;
+      // Trigger 3D re-render logic here
+    };
+  });
+
+  function downloadSTL() {
+    alert("In a full implementation, this triggers the JSCAD STL Serializer to save your file!");
+  }
+</script>
+
+</body>
+</html>
