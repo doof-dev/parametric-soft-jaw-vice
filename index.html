@@ -1,93 +1,242 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Parametric Woodworking Soft Jaws</title>
-  <script src="https://unpkg.com/@jscad/modeling@2.10.0/dist/index.min.js"></script>
-  <script src="https://unpkg.com/@jscad/regl-renderer@2.10.0/dist/index.min.js"></script>
-  <style>
-    body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; background: #f4f4f4; }
-    #controls { width: 300px; padding: 20px; background: white; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; overflow-y: auto; }
-    #viewer { flex-grow: 1; position: relative; background: #222; }
-    .input-group { margin-bottom: 15px; }
-    label { display: block; font-size: 12px; color: #666; margin-bottom: 5px; }
-    input { width: 100%; }
-    button { background: #007bff; color: white; border: none; padding: 10px; width: 100%; cursor: pointer; border-radius: 4px; }
-    button:hover { background: #0056b3; }
-    h2 { font-size: 18px; margin-top: 0; }
-  </style>
+    <title>Vise Jaw Lab | Manual Entry</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+
+    <style>
+        :root { --bp-blue: #003366; --cyan: #00ffff; --white: #ffffff; }
+        body { margin: 0; font-family: 'Courier New', monospace; display: flex; height: 100vh; background: var(--bp-blue); color: var(--white); overflow: hidden; }
+        #sidebar { width: 320px; padding: 20px; background: #001a33; border-right: 2px solid var(--cyan); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; z-index: 10; }
+        #print-area { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); background-size: 40px 40px; }
+        h2 { margin: 0; font-size: 18px; color: var(--cyan); border-bottom: 1px solid var(--cyan); padding-bottom: 8px; }
+        .section-title { font-size: 10px; color: var(--cyan); margin-top: 10px; opacity: 0.7; }
+        .input-group { display: flex; flex-direction: column; gap: 4px; }
+        .input-row { display: flex; align-items: center; gap: 8px; }
+        input, select { background: #001a33; border: 1px solid var(--cyan); color: var(--white); padding: 5px; font-family: monospace; outline: none; }
+        select option { background: #001a33; color: var(--white); }
+        input[type="number"] { width: 90px; font-size: 13px; background: rgba(0, 255, 255, 0.05); }
+        input[type="range"] { flex-grow: 1; accent-color: var(--cyan); cursor: pointer; }
+        .btn-main { background: var(--cyan); color: var(--bp-blue); border: none; padding: 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: 15px; box-shadow: 4px 4px 0px var(--white); }
+        .btn-main:active { transform: translate(2px, 2px); box-shadow: none; }
+        #title-block { position: absolute; bottom: 20px; right: 20px; border: 2px solid var(--cyan); padding: 10px; background: var(--bp-blue); min-width: 250px; }
+        .tb-row { border-bottom: 1px solid var(--cyan); display: flex; font-size: 10px; }
+        .tb-cell { padding: 5px; flex: 1; }
+        svg { width: 85%; height: 85%; }
+        .jaw-outline { fill: none; stroke: var(--white); stroke-width: 2; }
+        .dim-line { stroke: var(--cyan); stroke-width: 1; marker-end: url(#arrow); marker-start: url(#arrow); }
+        .dim-text { fill: var(--cyan); font-size: 13px; font-weight: bold; }
+        .hole { fill: rgba(0, 255, 255, 0.1); stroke: var(--cyan); stroke-width: 1.5; }
+    </style>
 </head>
 <body>
 
-<div id="controls">
-  <h2>Vise Jaw Generator</h2>
-  <div class="input-group">
-    <label>Jaw Width (mm)</label>
-    <input type="range" id="width" min="100" max="400" value="200">
-    <span id="widthVal">200</span>
-  </div>
-  <div class="input-group">
-    <label>Jaw Height (mm)</label>
-    <input type="range" id="height" min="50" max="200" value="100">
-    <span id="heightVal">100</span>
-  </div>
-  <div class="input-group">
-    <label>Hole Spacing (mm)</label>
-    <input type="range" id="spacing" min="50" max="350" value="120">
-    <span id="spacingVal">120</span>
-  </div>
-  <div class="input-group">
-    <label>Hole Diameter (mm)</label>
-    <input type="number" id="holeD" value="8">
-  </div>
-  <hr>
-  <button onclick="downloadSTL()">Download STL File</button>
-  <p style="font-size: 11px; color: #888; margin-top: 20px;">
-    Adjust sliders to match your woodworking vise. Bolt holes include a standard counterbore.
-  </p>
+<div id="sidebar">
+    <h2>Parametric Vice</h2>
+    <h2>Soft Jaw</h2>
+
+    
+    <div class="input-group">
+        <label>Unit System</label>
+        <select id="unit_type" onchange="convertUnits()">
+            <option value="mm">METRIC (MM)</option>
+            <option value="in">IMPERIAL (IN)</option>
+        </select>
+    </div>
+
+    <div class="section-title">// DIMENSIONS</div>
+    <div class="input-group">
+        <label>Width [W]</label>
+        <div class="input-row">
+            <input type="range" id="w_s" min="50" max="400" value="150" oninput="fromSlider('w')">
+            <input type="number" id="w_n" value="150" step="any" oninput="fromNum('w')">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>Height [H]</label>
+        <div class="input-row">
+            <input type="range" id="h_s" min="20" max="250" value="60" oninput="fromSlider('h')">
+            <input type="number" id="h_n" value="60" step="any" oninput="fromNum('h')">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>Thickness [T]</label>
+        <div class="input-row">
+            <input type="range" id="t_s" min="3" max="100" value="20" oninput="fromSlider('t')">
+            <input type="number" id="t_n" value="20" step="any" oninput="fromNum('t')">
+        </div>
+    </div>
+
+    <div class="section-title">// MOUNTING</div>
+    <div class="input-group">
+        <label>Bolt Spacing [S]</label>
+        <div class="input-row">
+            <input type="range" id="s_s" min="0" max="380" value="100" oninput="fromSlider('s')">
+            <input type="number" id="s_n" value="100" step="any" oninput="fromNum('s')">
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label>Corner Radius [R]</label>
+        <div class="input-row">
+            <input type="range" id="c_s" min="0" max="50" value="2" step="0.1" oninput="fromSlider('c')">
+            <input type="number" id="c_n" value="2" step="any" oninput="fromNum('c')">
+        </div>
+    </div>
+
+    <button class="btn-main" onclick="generateAndDownloadSTL()">Generate 3D Model (.STL)</button>
 </div>
 
-<div id="viewer"></div>
+<div id="print-area">
+    <svg id="svg-canvas" viewBox="0 0 800 600">
+        <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="cyan" />
+            </marker>
+        </defs>
+        <rect id="jaw-body" class="jaw-outline" />
+        <circle id="hole-l" class="hole" r="12" />
+        <circle id="hole-r" class="hole" r="12" />
+        <line id="dim-w-line" class="dim-line" /><text id="dim-w-text" class="dim-text" text-anchor="middle"></text>
+        <line id="dim-h-line" class="dim-line" /><text id="dim-h-text" class="dim-text" text-anchor="middle" transform="rotate(-90)"></text>
+        <line id="dim-s-line" class="dim-line" /><text id="dim-s-text" class="dim-text" text-anchor="middle"></text>
+    </svg>
+
+    <div id="title-block">
+        <div class="tb-row"><div class="tb-cell">PROJECT: VISE_JAW_CUSTOM</div></div>
+        <div class="tb-row">
+            <div class="tb-cell" style="border-right:1px solid cyan">DWG NO: A-105</div>
+            <div class="tb-cell">STATUS: MANUAL_ENTRY</div>
+        </div>
+    </div>
+</div>
 
 <script>
-  // This is where the 3D logic lives
-  // Using OpenJSCAD syntax to build the jaw
-  function generateModel(params) {
-    const { primitives, booleans, transforms } = jscadModeling;
+    const IN_TO_MM = 25.4;
+    const MM_TO_IN = 1/25.4;
+
+    // These handle the bidirectional sync
+    function fromSlider(p) {
+        document.getElementById(p + '_n').value = document.getElementById(p + '_s').value;
+        updatePrint();
+    }
     
-    // Main Block
-    let jaw = primitives.cuboid({ size: [params.width, 25, params.height] });
+    function fromNum(p) {
+        const val = document.getElementById(p + '_n').value;
+        if(val !== "") {
+            document.getElementById(p + '_s').value = val;
+            updatePrint();
+        }
+    }
 
-    // Bolt Holes
-    const hole = primitives.cylinder({ radius: params.holeD / 2, height: 30 });
-    const counter = primitives.cylinder({ radius: (params.holeD * 1.5) / 2, height: 10 });
-    
-    const boltHole = booleans.union(
-      hole,
-      transforms.translate([0, 0, 10], counter)
-    );
+    function convertUnits() {
+        const isInch = document.getElementById('unit_type').value === 'in';
+        ['w', 'h', 't', 's', 'c'].forEach(id => {
+            const num = document.getElementById(id + '_n');
+            const slider = document.getElementById(id + '_s');
+            let val = parseFloat(num.value) || 0;
+            
+            if (isInch) {
+                val *= MM_TO_IN;
+                slider.min = (parseFloat(slider.min) * MM_TO_IN).toFixed(4);
+                slider.max = (parseFloat(slider.max) * MM_TO_IN).toFixed(4);
+                slider.step = 0.001;
+                num.value = val.toFixed(4);
+            } else {
+                val *= IN_TO_MM;
+                slider.min = (id === 'c' || id === 's') ? 0 : 10;
+                slider.max = (id === 'w') ? 500 : 300;
+                slider.step = 0.5;
+                num.value = val.toFixed(1);
+            }
+            slider.value = num.value;
+        });
+        updatePrint();
+    }
 
-    const hole1 = transforms.translate([params.spacing / 2, 0, 0], transforms.rotateX(Math.PI/2, boltHole));
-    const hole2 = transforms.translate([-params.spacing / 2, 0, 0], transforms.rotateX(Math.PI/2, boltHole));
+    function updatePrint() {
+        const w = parseFloat(document.getElementById('w_n').value) || 0;
+        const h = parseFloat(document.getElementById('h_n').value) || 0;
+        const s = parseFloat(document.getElementById('s_n').value) || 0;
+        const c = parseFloat(document.getElementById('c_n').value) || 0;
+        const unit = document.getElementById('unit_type').value;
 
-    return booleans.subtract(jaw, hole1, hole2);
-  }
+        const f = unit === 'in' ? IN_TO_MM : 1;
+        const scale = Math.min(550/(w*f), 350/(h*f)) * 0.8 || 1;
+        
+        const sw = w * f * scale; const sh = h * f * scale; const ss = s * f * scale;
+        const cx = 400; const cy = 300;
 
-  // UI and Rendering Logic (Simplified for this example)
-  // In a real app, you'd use the jscad-renderer here.
-  // For the sake of this prototype, we'll focus on the data flow.
-  
-  const inputs = ['width', 'height', 'spacing'];
-  inputs.forEach(id => {
-    document.getElementById(id).oninput = (e) => {
-      document.getElementById(id + 'Val').innerText = e.target.value;
-      // Trigger 3D re-render logic here
-    };
-  });
+        const body = document.getElementById('jaw-body');
+        body.setAttribute('width', sw); body.setAttribute('height', sh);
+        body.setAttribute('x', cx - sw/2); body.setAttribute('y', cy - sh/2);
+        body.setAttribute('rx', c * f * scale);
 
-  function downloadSTL() {
-    alert("In a full implementation, this triggers the JSCAD STL Serializer to save your file!");
-  }
+        document.getElementById('hole-l').setAttribute('cx', cx - ss/2);
+        document.getElementById('hole-l').setAttribute('cy', cy);
+        document.getElementById('hole-r').setAttribute('cx', cx + ss/2);
+        document.getElementById('hole-r').setAttribute('cy', cy);
+
+        document.getElementById('dim-w-text').textContent = `W: ${w}${unit}`;
+        document.getElementById('dim-w-line').setAttribute('x1', cx - sw/2); 
+        document.getElementById('dim-w-line').setAttribute('x2', cx + sw/2);
+        document.getElementById('dim-w-line').setAttribute('y1', cy - sh/2 - 40); 
+        document.getElementById('dim-w-line').setAttribute('y2', cy - sh/2 - 40);
+        document.getElementById('dim-w-text').setAttribute('x', cx);
+        document.getElementById('dim-w-text').setAttribute('y', cy - sh/2 - 50);
+
+        document.getElementById('dim-h-text').textContent = `H: ${h}${unit}`;
+        document.getElementById('dim-h-line').setAttribute('x1', cx - sw/2 - 40); 
+        document.getElementById('dim-h-line').setAttribute('x2', cx - sw/2 - 40);
+        document.getElementById('dim-h-line').setAttribute('y1', cy - sh/2); 
+        document.getElementById('dim-h-line').setAttribute('y2', cy + sh/2);
+        document.getElementById('dim-h-text').setAttribute('x', -cy);
+        document.getElementById('dim-h-text').setAttribute('y', cx - sw/2 - 50);
+
+        document.getElementById('dim-s-text').textContent = `S: ${s}${unit}`;
+        const dsL = document.getElementById('dim-s-line');
+        dsL.setAttribute('x1', cx - ss/2); dsL.setAttribute('x2', cx + ss/2);
+        dsL.setAttribute('y1', cy + sh/2 + 40); dsL.setAttribute('y2', cy + sh/2 + 40);
+        document.getElementById('dim-s-text').setAttribute('x', cx);
+        document.getElementById('dim-s-text').setAttribute('y', cy + sh/2 + 60);
+    }
+
+    function generateAndDownloadSTL() {
+        const isInch = document.getElementById('unit_type').value === 'in';
+        const f = isInch ? IN_TO_MM : 1;
+        const w = parseFloat(document.getElementById('w_n').value) * f;
+        const h = parseFloat(document.getElementById('h_n').value) * f;
+        const t = parseFloat(document.getElementById('t_n').value) * f;
+        const s = parseFloat(document.getElementById('s_n').value) * f;
+        const c = parseFloat(document.getElementById('c_n').value) * f;
+
+        const shape = new THREE.Shape();
+        const x = -w/2, y = -h/2;
+        if (c <= 0) {
+            shape.moveTo(x, y); shape.lineTo(x + w, y); shape.lineTo(x + w, y + h); shape.lineTo(x, y + h); shape.lineTo(x, y);
+        } else {
+            shape.moveTo(x + c, y); shape.lineTo(x + w - c, y); shape.quadraticCurveTo(x + w, y, x + w, y + c);
+            shape.lineTo(x + w, y + h - c); shape.quadraticCurveTo(x + w, y + h, x + w - c, y + h);
+            shape.lineTo(x + c, y + h); shape.quadraticCurveTo(x, y + h, x, y + h - c);
+            shape.lineTo(x, y + c); shape.quadraticCurveTo(x, y, x + c, y);
+        }
+
+        const hole1 = new THREE.Path(); hole1.absarc(-s/2, 0, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole1);
+        const hole2 = new THREE.Path(); hole2.absarc(s/2, 0, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole2);
+
+        const geometry = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false });
+        const mesh = new THREE.Mesh(geometry);
+        const str = (new THREE.STLExporter()).parse(mesh);
+        const blob = new Blob([str], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `vise_jaw_${w.toFixed(1)}mm.stl`;
+        link.click();
+    }
+    window.onload = updatePrint;
 </script>
-
 </body>
 </html>
