@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Vise Jaw Lab | Manual Entry</title>
+    <title>doof.digital | Vise Jaw Lab</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
 
@@ -33,9 +33,7 @@
 <body>
 
 <div id="sidebar">
-    <h2>Parametric Vice</h2>
-    <h2>Soft Jaw</h2>
-
+    <h2>parametric-soft-jaw-vice</h2>
     
     <div class="input-group">
         <label>Unit System</label>
@@ -57,20 +55,12 @@
     <div class="input-group">
         <label>Height [H]</label>
         <div class="input-row">
-            <input type="range" id="h_s" min="20" max="250" value="60" oninput="fromSlider('h')">
-            <input type="number" id="h_n" value="60" step="any" oninput="fromNum('h')">
+            <input type="range" id="h_s" min="20" max="250" value="60" oninput="fromSlider('h'); updateDistanceTop()">
+            <input type="number" id="h_n" value="60" step="any" oninput="fromNum('h'); updateDistanceTop()">
         </div>
     </div>
 
-    <div class="input-group">
-        <label>Thickness [T]</label>
-        <div class="input-row">
-            <input type="range" id="t_s" min="3" max="100" value="20" oninput="fromSlider('t')">
-            <input type="number" id="t_n" value="20" step="any" oninput="fromNum('t')">
-        </div>
-    </div>
-
-    <div class="section-title">// MOUNTING</div>
+    <div class="section-title">// HOLE POSITIONING</div>
     <div class="input-group">
         <label>Bolt Spacing [S]</label>
         <div class="input-row">
@@ -80,10 +70,18 @@
     </div>
 
     <div class="input-group">
-        <label>Corner Radius [R]</label>
+        <label>Vertical Offset [O]</label>
         <div class="input-row">
-            <input type="range" id="c_s" min="0" max="50" value="2" step="0.1" oninput="fromSlider('c')">
-            <input type="number" id="c_n" value="2" step="any" oninput="fromNum('c')">
+            <input type="range" id="o_s" min="-100" max="100" value="0" oninput="fromSlider('o'); updateDistanceTop()">
+            <input type="number" id="o_n" value="0" step="any" oninput="fromNum('o'); updateDistanceTop()">
+        </div>
+    </div>
+
+    <div class="input-group" style="border: 1px solid rgba(0,255,255,0.3); padding: 8px; border-radius: 4px;">
+        <label style="color: var(--cyan)">Dist. from Top [D.T.]</label>
+        <div class="input-row">
+            <input type="range" id="dt_s" min="0" max="250" value="30" oninput="fromSliderDT()">
+            <input type="number" id="dt_n" value="30" step="any" oninput="fromNumDT()">
         </div>
     </div>
 
@@ -100,17 +98,16 @@
         <rect id="jaw-body" class="jaw-outline" />
         <circle id="hole-l" class="hole" r="12" />
         <circle id="hole-r" class="hole" r="12" />
+        
         <line id="dim-w-line" class="dim-line" /><text id="dim-w-text" class="dim-text" text-anchor="middle"></text>
         <line id="dim-h-line" class="dim-line" /><text id="dim-h-text" class="dim-text" text-anchor="middle" transform="rotate(-90)"></text>
         <line id="dim-s-line" class="dim-line" /><text id="dim-s-text" class="dim-text" text-anchor="middle"></text>
+        <line id="dim-dt-line" class="dim-line" style="stroke-dasharray: 4;" /><text id="dim-dt-text" class="dim-text" style="font-size: 10px;"></text>
     </svg>
 
     <div id="title-block">
-        <div class="tb-row"><div class="tb-cell">PROJECT: VISE_JAW_CUSTOM</div></div>
-        <div class="tb-row">
-            <div class="tb-cell" style="border-right:1px solid cyan">DWG NO: A-105</div>
-            <div class="tb-cell">STATUS: MANUAL_ENTRY</div>
-        </div>
+        <div class="tb-row"><div class="tb-cell">DOOF.DIGITAL // VISE_JAW_V3</div></div>
+        <div class="tb-row"><div class="tb-cell">STATUS: ALL SYSTEMS OK</div></div>
     </div>
 </div>
 
@@ -118,7 +115,6 @@
     const IN_TO_MM = 25.4;
     const MM_TO_IN = 1/25.4;
 
-    // These handle the bidirectional sync
     function fromSlider(p) {
         document.getElementById(p + '_n').value = document.getElementById(p + '_s').value;
         updatePrint();
@@ -132,23 +128,48 @@
         }
     }
 
+    // Custom Logic for Distance from Top
+    function updateDistanceTop() {
+        const h = parseFloat(document.getElementById('h_n').value) || 0;
+        const o = parseFloat(document.getElementById('o_n').value) || 0;
+        const dt = (h/2) - o;
+        document.getElementById('dt_n').value = dt.toFixed(4);
+        document.getElementById('dt_s').value = dt;
+        updatePrint();
+    }
+
+    function fromSliderDT() {
+        const h = parseFloat(document.getElementById('h_n').value) || 0;
+        const dt = parseFloat(document.getElementById('dt_s').value);
+        document.getElementById('dt_n').value = dt;
+        const o = (h/2) - dt;
+        document.getElementById('o_n').value = o.toFixed(4);
+        document.getElementById('o_s').value = o;
+        updatePrint();
+    }
+
+    function fromNumDT() {
+        const h = parseFloat(document.getElementById('h_n').value) || 0;
+        const dt = parseFloat(document.getElementById('dt_n').value) || 0;
+        document.getElementById('dt_s').value = dt;
+        const o = (h/2) - dt;
+        document.getElementById('o_n').value = o.toFixed(4);
+        document.getElementById('o_s').value = o;
+        updatePrint();
+    }
+
     function convertUnits() {
         const isInch = document.getElementById('unit_type').value === 'in';
-        ['w', 'h', 't', 's', 'c'].forEach(id => {
+        ['w', 'h', 's', 'o', 'dt'].forEach(id => {
             const num = document.getElementById(id + '_n');
             const slider = document.getElementById(id + '_s');
             let val = parseFloat(num.value) || 0;
-            
             if (isInch) {
                 val *= MM_TO_IN;
-                slider.min = (parseFloat(slider.min) * MM_TO_IN).toFixed(4);
-                slider.max = (parseFloat(slider.max) * MM_TO_IN).toFixed(4);
                 slider.step = 0.001;
                 num.value = val.toFixed(4);
             } else {
                 val *= IN_TO_MM;
-                slider.min = (id === 'c' || id === 's') ? 0 : 10;
-                slider.max = (id === 'w') ? 500 : 300;
                 slider.step = 0.5;
                 num.value = val.toFixed(1);
             }
@@ -161,25 +182,35 @@
         const w = parseFloat(document.getElementById('w_n').value) || 0;
         const h = parseFloat(document.getElementById('h_n').value) || 0;
         const s = parseFloat(document.getElementById('s_n').value) || 0;
-        const c = parseFloat(document.getElementById('c_n').value) || 0;
+        const o = parseFloat(document.getElementById('o_n').value) || 0;
+        const dt = parseFloat(document.getElementById('dt_n').value) || 0;
         const unit = document.getElementById('unit_type').value;
 
         const f = unit === 'in' ? IN_TO_MM : 1;
         const scale = Math.min(550/(w*f), 350/(h*f)) * 0.8 || 1;
         
-        const sw = w * f * scale; const sh = h * f * scale; const ss = s * f * scale;
+        const sw = w * f * scale; const sh = h * f * scale; 
+        const ss = s * f * scale; const so = o * f * scale; const sdt = dt * f * scale;
         const cx = 400; const cy = 300;
 
         const body = document.getElementById('jaw-body');
         body.setAttribute('width', sw); body.setAttribute('height', sh);
         body.setAttribute('x', cx - sw/2); body.setAttribute('y', cy - sh/2);
-        body.setAttribute('rx', c * f * scale);
 
         document.getElementById('hole-l').setAttribute('cx', cx - ss/2);
-        document.getElementById('hole-l').setAttribute('cy', cy);
+        document.getElementById('hole-l').setAttribute('cy', cy - so);
         document.getElementById('hole-r').setAttribute('cx', cx + ss/2);
-        document.getElementById('hole-r').setAttribute('cy', cy);
+        document.getElementById('hole-r').setAttribute('cy', cy - so);
 
+        // Visual Distance from Top Line
+        const dtLine = document.getElementById('dim-dt-line');
+        dtLine.setAttribute('x1', cx - ss/2); dtLine.setAttribute('x2', cx - ss/2);
+        dtLine.setAttribute('y1', cy - sh/2); dtLine.setAttribute('y2', cy - so);
+        document.getElementById('dim-dt-text').textContent = `DT: ${dt}`;
+        document.getElementById('dim-dt-text').setAttribute('x', cx - ss/2 + 5);
+        document.getElementById('dim-dt-text').setAttribute('y', cy - sh/2 + sdt/2);
+
+        // Standard Dimensions
         document.getElementById('dim-w-text').textContent = `W: ${w}${unit}`;
         document.getElementById('dim-w-line').setAttribute('x1', cx - sw/2); 
         document.getElementById('dim-w-line').setAttribute('x2', cx + sw/2);
@@ -209,34 +240,26 @@
         const f = isInch ? IN_TO_MM : 1;
         const w = parseFloat(document.getElementById('w_n').value) * f;
         const h = parseFloat(document.getElementById('h_n').value) * f;
-        const t = parseFloat(document.getElementById('t_n').value) * f;
         const s = parseFloat(document.getElementById('s_n').value) * f;
-        const c = parseFloat(document.getElementById('c_n').value) * f;
+        const o = parseFloat(document.getElementById('o_n').value) * f;
 
         const shape = new THREE.Shape();
         const x = -w/2, y = -h/2;
-        if (c <= 0) {
-            shape.moveTo(x, y); shape.lineTo(x + w, y); shape.lineTo(x + w, y + h); shape.lineTo(x, y + h); shape.lineTo(x, y);
-        } else {
-            shape.moveTo(x + c, y); shape.lineTo(x + w - c, y); shape.quadraticCurveTo(x + w, y, x + w, y + c);
-            shape.lineTo(x + w, y + h - c); shape.quadraticCurveTo(x + w, y + h, x + w - c, y + h);
-            shape.lineTo(x + c, y + h); shape.quadraticCurveTo(x, y + h, x, y + h - c);
-            shape.lineTo(x, y + c); shape.quadraticCurveTo(x, y, x + c, y);
-        }
+        shape.moveTo(x, y); shape.lineTo(x + w, y); shape.lineTo(x + w, y + h); shape.lineTo(x, y + h); shape.lineTo(x, y);
 
-        const hole1 = new THREE.Path(); hole1.absarc(-s/2, 0, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole1);
-        const hole2 = new THREE.Path(); hole2.absarc(s/2, 0, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole2);
+        const hole1 = new THREE.Path(); hole1.absarc(-s/2, o, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole1);
+        const hole2 = new THREE.Path(); hole2.absarc(s/2, o, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole2);
 
-        const geometry = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false });
+        const geometry = new THREE.ExtrudeGeometry(shape, { depth: 20, bevelEnabled: false });
         const mesh = new THREE.Mesh(geometry);
         const str = (new THREE.STLExporter()).parse(mesh);
         const blob = new Blob([str], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `vise_jaw_${w.toFixed(1)}mm.stl`;
+        link.download = `vise_jaw_dt.stl`;
         link.click();
     }
-    window.onload = updatePrint;
+    window.onload = updateDistanceTop;
 </script>
 </body>
 </html>
