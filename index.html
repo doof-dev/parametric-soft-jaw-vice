@@ -1,265 +1,354 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>doof.digital | Vise Jaw Lab</title>
+    <meta charset="UTF-8">
+    <title>doof.digital | Vise Jaw Lab V22</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
-
+    
     <style>
-        :root { --bp-blue: #003366; --cyan: #00ffff; --white: #ffffff; }
+        :root { --bp-blue: #003366; --cyan: #00ffff; --white: #ffffff; --dark: #001a33; }
+        
         body { margin: 0; font-family: 'Courier New', monospace; display: flex; height: 100vh; background: var(--bp-blue); color: var(--white); overflow: hidden; }
-        #sidebar { width: 320px; padding: 20px; background: #001a33; border-right: 2px solid var(--cyan); overflow-y: auto; display: flex; flex-direction: column; gap: 12px; z-index: 10; }
-        #print-area { flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); background-size: 40px 40px; }
-        h2 { margin: 0; font-size: 18px; color: var(--cyan); border-bottom: 1px solid var(--cyan); padding-bottom: 8px; }
-        .section-title { font-size: 10px; color: var(--cyan); margin-top: 10px; opacity: 0.7; }
+        
+        /* SIDEBAR */
+        #sidebar { 
+            width: 360px; padding: 20px; background: var(--dark); border-right: 2px solid var(--cyan); 
+            overflow-y: auto; display: flex; flex-direction: column; gap: 12px; z-index: 100;
+        }
+        
+        h2 { margin: 0; font-size: 18px; color: var(--cyan); border-bottom: 2px solid var(--cyan); padding-bottom: 8px; text-transform: uppercase; }
+        .section-title { font-size: 10px; color: var(--cyan); margin-top: 10px; opacity: 0.7; border-left: 2px solid var(--cyan); padding-left: 5px; }
+
+        /* MANUAL ENTRY INPUTS */
         .input-group { display: flex; flex-direction: column; gap: 4px; }
         .input-row { display: flex; align-items: center; gap: 8px; }
-        input, select { background: #001a33; border: 1px solid var(--cyan); color: var(--white); padding: 5px; font-family: monospace; outline: none; }
-        select option { background: #001a33; color: var(--white); }
-        input[type="number"] { width: 90px; font-size: 13px; background: rgba(0, 255, 255, 0.05); }
+        
+        input, select { 
+            background: var(--dark); border: 1px solid var(--cyan); color: var(--white); 
+            padding: 8px; font-family: 'Courier New', monospace; outline: none; 
+        }
+        
+        input[type="number"] { width: 100px; font-size: 14px; font-weight: bold; color: var(--cyan); background: rgba(0, 255, 255, 0.1); }
+        input[type="number"]:focus { background: var(--cyan); color: var(--dark); }
         input[type="range"] { flex-grow: 1; accent-color: var(--cyan); cursor: pointer; }
-        .btn-main { background: var(--cyan); color: var(--bp-blue); border: none; padding: 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; margin-top: 15px; box-shadow: 4px 4px 0px var(--white); }
+        
+        .btn-main { 
+            background: var(--cyan); color: var(--bp-blue); border: none; padding: 12px; 
+            cursor: pointer; font-weight: bold; text-transform: uppercase; 
+            box-shadow: 4px 4px 0px var(--white); transition: 0.1s;
+        }
         .btn-main:active { transform: translate(2px, 2px); box-shadow: none; }
-        #title-block { position: absolute; bottom: 20px; right: 20px; border: 2px solid var(--cyan); padding: 10px; background: var(--bp-blue); min-width: 250px; }
+
+        /* VIEWPORT */
+        #viewport { 
+            flex-grow: 1; position: relative; display: flex; align-items: center; justify-content: center; 
+            background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), 
+                              linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); 
+            background-size: 40px 40px; 
+        }
+        svg { width: 85%; height: 85%; overflow: visible; }
+        .jaw-outline { fill: rgba(0, 51, 102, 0.2); stroke: var(--white); stroke-width: 2.5; }
+        .dim-line { stroke: var(--cyan); stroke-width: 1.5; marker-end: url(#arrow); marker-start: url(#arrow); }
+        .dim-text { fill: var(--cyan); font-size: 13px; font-weight: bold; paint-order: stroke; stroke: var(--dark); stroke-width: 3px; }
+        .hole { fill: rgba(0, 255, 255, 0.1); stroke: var(--cyan); stroke-width: 2; }
+
+        #title-block { position: absolute; bottom: 20px; right: 20px; border: 2px solid var(--cyan); background: var(--dark); min-width: 320px; }
         .tb-row { border-bottom: 1px solid var(--cyan); display: flex; font-size: 10px; }
-        .tb-cell { padding: 5px; flex: 1; }
-        svg { width: 85%; height: 85%; }
-        .jaw-outline { fill: none; stroke: var(--white); stroke-width: 2; }
-        .dim-line { stroke: var(--cyan); stroke-width: 1; marker-end: url(#arrow); marker-start: url(#arrow); }
-        .dim-text { fill: var(--cyan); font-size: 13px; font-weight: bold; }
-        .hole { fill: rgba(0, 255, 255, 0.1); stroke: var(--cyan); stroke-width: 1.5; }
+        .tb-cell { padding: 8px; flex: 1; text-transform: uppercase; }
+
+        /* MODAL */
+        .overlay { position: fixed; inset: 0; background: rgba(0, 13, 26, 0.95); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal { width: 500px; background: var(--dark); border: 2px solid var(--cyan); padding: 25px; max-height: 80vh; overflow-y: auto; }
+
+        /* PRINT OVERRIDE */
+        @media print {
+            #sidebar, .overlay, .btn-main { display: none !important; }
+            body { background: white !important; color: black !important; }
+            #viewport { background: white !important; background-image: none !important; position: absolute; inset: 0; }
+            .jaw-outline { stroke: black !important; fill: none !important; stroke-width: 2; }
+            .dim-line { stroke: #333 !important; marker-end: url(#arrow-print); marker-start: url(#arrow-print); }
+            .dim-text { fill: black !important; stroke: white !important; }
+            .hole { stroke: black !important; fill: none !important; }
+            #title-block { border: 2px solid black !important; color: black !important; bottom: 10px; right: 10px; }
+            #title-block .tb-row { border-color: black !important; }
+            #arrow path { fill: black !important; }
+        }
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <h2>parametric-soft-jaw-vice</h2>
-    
-    <div class="input-group">
-        <label>Unit System</label>
-        <select id="unit_type" onchange="convertUnits()">
-            <option value="mm">METRIC (MM)</option>
-            <option value="in">IMPERIAL (IN)</option>
-        </select>
+<div id="vault-overlay" class="overlay">
+    <div class="modal">
+        <h2 style="margin-bottom:15px;">VAULT_EXPLORER</h2>
+        <div id="vault-list"></div>
+        <button class="btn-main" onclick="toggleVault(false)" style="width:100%; margin-top:15px;">Return to Terminal</button>
     </div>
+</div>
 
-    <div class="section-title">// DIMENSIONS</div>
+<div id="sidebar">
+    <h2>Parametric Soft Jaw Vice</h2>
+    
+    <div class="section-title">00_METADATA</div>
+    <input type="text" id="m_brand" placeholder="BRAND / VISE NAME" oninput="update()">
+    <input type="text" id="m_model" placeholder="MODEL / SERIES" oninput="update()">
+
+    <div class="section-title">01_SYSTEM</div>
+    <select id="unit_type" onchange="convertUnits()">
+        <option value="mm">METRIC (MM)</option>
+        <option value="in">IMPERIAL (IN)</option>
+    </select>
+
+    <div class="section-title">02_GEOMETRY</div>
     <div class="input-group">
         <label>Width [W]</label>
         <div class="input-row">
-            <input type="range" id="w_s" min="50" max="400" value="150" oninput="fromSlider('w')">
-            <input type="number" id="w_n" value="150" step="any" oninput="fromNum('w')">
+            <input type="range" id="w_s" min="50" max="600" value="150" oninput="sync('w', 'slider')">
+            <input type="number" id="w_n" value="150" step="any" oninput="sync('w', 'num')">
         </div>
     </div>
-
     <div class="input-group">
         <label>Height [H]</label>
         <div class="input-row">
-            <input type="range" id="h_s" min="20" max="250" value="60" oninput="fromSlider('h'); updateDistanceTop()">
-            <input type="number" id="h_n" value="60" step="any" oninput="fromNum('h'); updateDistanceTop()">
+            <input type="range" id="h_s" min="20" max="400" value="60" oninput="sync('h', 'slider')">
+            <input type="number" id="h_n" value="60" step="any" oninput="sync('h', 'num')">
         </div>
     </div>
-
-    <div class="section-title">// HOLE POSITIONING</div>
     <div class="input-group">
-        <label>Bolt Spacing [S]</label>
+        <label>Thickness [T]</label>
         <div class="input-row">
-            <input type="range" id="s_s" min="0" max="380" value="100" oninput="fromSlider('s')">
-            <input type="number" id="s_n" value="100" step="any" oninput="fromNum('s')">
+            <input type="range" id="t_s" min="2" max="150" value="20" oninput="sync('t', 'slider')">
+            <input type="number" id="t_n" value="20" step="any" oninput="sync('t', 'num')">
         </div>
     </div>
 
+    <div class="section-title">03_MOUNTING</div>
+    <select id="hole_count" onchange="update()">
+        <option value="2">2-HOLE (MACHINE)</option>
+        <option value="3">3-HOLE (WOOD VISE)</option>
+    </select>
     <div class="input-group">
-        <label>Vertical Offset [O]</label>
+        <label>Hole Ø</label>
         <div class="input-row">
-            <input type="range" id="o_s" min="-100" max="100" value="0" oninput="fromSlider('o'); updateDistanceTop()">
-            <input type="number" id="o_n" value="0" step="any" oninput="fromNum('o'); updateDistanceTop()">
+            <input type="range" id="dia_s" min="1" max="50" value="12" oninput="sync('dia', 'slider')">
+            <input type="number" id="dia_n" value="12" step="any" oninput="sync('dia', 'num')">
+        </div>
+    </div>
+    <div class="input-group">
+        <label>Spacing [S]</label>
+        <div class="input-row">
+            <input type="range" id="s_s" min="0" max="550" value="100" oninput="sync('s', 'slider')">
+            <input type="number" id="s_n" value="100" step="any" oninput="sync('s', 'num')">
+        </div>
+    </div>
+    <div class="input-group">
+        <label>Dist. Top [DT] <input type="checkbox" id="center_v" onchange="update()"> MID</label>
+        <div class="input-row">
+            <input type="range" id="dt_s" min="0" max="400" value="30" oninput="sync('dt', 'slider')">
+            <input type="number" id="dt_n" value="30" step="any" oninput="sync('dt', 'num')">
         </div>
     </div>
 
-    <div class="input-group" style="border: 1px solid rgba(0,255,255,0.3); padding: 8px; border-radius: 4px;">
-        <label style="color: var(--cyan)">Dist. from Top [D.T.]</label>
-        <div class="input-row">
-            <input type="range" id="dt_s" min="0" max="250" value="30" oninput="fromSliderDT()">
-            <input type="number" id="dt_n" value="30" step="any" oninput="fromNumDT()">
-        </div>
-    </div>
-
-    <button class="btn-main" onclick="generateAndDownloadSTL()">Generate 3D Model (.STL)</button>
+    <button class="btn-main" onclick="cloudSave()">Cloud Sync (Save)</button>
+    <button class="btn-main" onclick="toggleVault(true)" style="background:var(--white); color:var(--dark);">Cloud Explorer</button>
+    <button class="btn-main" onclick="generateSTL()">Generate STL</button>
+    <button class="btn-main" onclick="window.print()" style="background:none; border:1px solid var(--cyan); color:var(--cyan); box-shadow:none;">Print Blueprint</button>
 </div>
 
-<div id="print-area">
+<div id="viewport">
     <svg id="svg-canvas" viewBox="0 0 800 600">
         <defs>
             <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="cyan" />
             </marker>
+            <marker id="arrow-print" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="black" />
+            </marker>
         </defs>
         <rect id="jaw-body" class="jaw-outline" />
-        <circle id="hole-l" class="hole" r="12" />
-        <circle id="hole-r" class="hole" r="12" />
+        <g id="holes-layer"></g>
         
         <line id="dim-w-line" class="dim-line" /><text id="dim-w-text" class="dim-text" text-anchor="middle"></text>
         <line id="dim-h-line" class="dim-line" /><text id="dim-h-text" class="dim-text" text-anchor="middle" transform="rotate(-90)"></text>
         <line id="dim-s-line" class="dim-line" /><text id="dim-s-text" class="dim-text" text-anchor="middle"></text>
-        <line id="dim-dt-line" class="dim-line" style="stroke-dasharray: 4;" /><text id="dim-dt-text" class="dim-text" style="font-size: 10px;"></text>
+        <line id="dim-dt-line" class="dim-line" style="stroke-dasharray: 4;" /><text id="dim-dt-text" class="dim-text"></text>
     </svg>
 
     <div id="title-block">
-        <div class="tb-row"><div class="tb-cell">DOOF.DIGITAL // VISE_JAW_V3</div></div>
-        <div class="tb-row"><div class="tb-cell">STATUS: ALL SYSTEMS OK</div></div>
+        <div class="tb-row"><div class="tb-cell" style="font-weight:bold; color:var(--cyan);">doof.digital // VISE_JAW</div></div>
+        <div class="tb-row">
+            <div class="tb-cell">BRAND: <span id="tb-brand">---</span></div>
+            <div class="tb-cell">MODEL: <span id="tb-model">---</span></div>
+        </div>
+        <div class="tb-row">
+            <div class="tb-cell">THICK: <span id="tb-thick">--</span><span class="un">mm</span></div>
+            <div class="tb-cell">UNITS: <span id="tb-unit">MM</span></div>
+        </div>
+        <div class="tb-row">
+            <div class="tb-cell">STATUS: <span id="db-status" style="color:var(--cyan);">CONNECTING...</span></div>
+        </div>
     </div>
 </div>
 
-<script>
-    const IN_TO_MM = 25.4;
-    const MM_TO_IN = 1/25.4;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    function fromSlider(p) {
-        document.getElementById(p + '_n').value = document.getElementById(p + '_s').value;
-        updatePrint();
-    }
-    
-    function fromNum(p) {
-        const val = document.getElementById(p + '_n').value;
-        if(val !== "") {
-            document.getElementById(p + '_s').value = val;
-            updatePrint();
+    const firebaseConfig = {
+        databaseURL: "https://psjv-27df6-default-rtdb.firebaseio.com",
+        projectId: "psjv-27df6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db);
+
+    // Verify Connection
+    get(child(dbRef, '.info/connected')).then((snap) => {
+        document.getElementById('db-status').innerText = snap.val() ? "VAULT_ONLINE" : "OFFLINE_MODE";
+    });
+
+    window.cloudSave = async function() {
+        const id = (document.getElementById('m_brand').value || 'CUSTOM') + "_" + Date.now().toString().slice(-4);
+        const data = {
+            w: document.getElementById('w_n').value, h: document.getElementById('h_n').value,
+            t: document.getElementById('t_n').value, s: document.getElementById('s_n').value,
+            dt: document.getElementById('dt_n').value, dia: document.getElementById('dia_n').value,
+            hc: document.getElementById('hole_count').value, brand: document.getElementById('m_brand').value,
+            model: document.getElementById('m_model').value, unit: document.getElementById('unit_type').value
+        };
+        try {
+            await set(ref(db, 'presets/' + id), data);
+            alert("UPLOAD SUCCESS: " + id);
+        } catch (e) { alert("VAULT ERROR: check database rules"); }
+    };
+
+    window.toggleVault = function(show) {
+        const overlay = document.getElementById('vault-overlay');
+        overlay.style.display = show ? 'flex' : 'none';
+        if (show) {
+            get(child(dbRef, 'presets/')).then((snap) => {
+                const list = document.getElementById('vault-list');
+                list.innerHTML = "";
+                if (snap.exists()) {
+                    Object.entries(snap.val()).forEach(([id, p]) => {
+                        const div = document.createElement('div');
+                        div.style = "padding:10px; border-bottom:1px solid #00ffff33; cursor:pointer; display:flex; justify-content:space-between;";
+                        div.innerHTML = `<span>${id}</span> <small>${p.w}x${p.h}${p.unit}</small>`;
+                        div.onclick = () => { loadPreset(p); toggleVault(false); };
+                        list.appendChild(div);
+                    });
+                } else { list.innerText = "Vault is empty."; }
+            });
         }
-    }
+    };
 
-    // Custom Logic for Distance from Top
-    function updateDistanceTop() {
-        const h = parseFloat(document.getElementById('h_n').value) || 0;
-        const o = parseFloat(document.getElementById('o_n').value) || 0;
-        const dt = (h/2) - o;
-        document.getElementById('dt_n').value = dt.toFixed(4);
-        document.getElementById('dt_s').value = dt;
-        updatePrint();
+    function loadPreset(p) {
+        ['w','h','t','s','dt','dia'].forEach(k => { document.getElementById(k+'_n').value = document.getElementById(k+'_s').value = p[k]; });
+        document.getElementById('m_brand').value = p.brand;
+        document.getElementById('m_model').value = p.model;
+        document.getElementById('hole_count').value = p.hc;
+        document.getElementById('unit_type').value = p.unit;
+        window.update();
     }
+</script>
 
-    function fromSliderDT() {
-        const h = parseFloat(document.getElementById('h_n').value) || 0;
-        const dt = parseFloat(document.getElementById('dt_s').value);
-        document.getElementById('dt_n').value = dt;
-        const o = (h/2) - dt;
-        document.getElementById('o_n').value = o.toFixed(4);
-        document.getElementById('o_s').value = o;
-        updatePrint();
-    }
+<script>
+    let currentUnit = 'mm';
 
-    function fromNumDT() {
-        const h = parseFloat(document.getElementById('h_n').value) || 0;
-        const dt = parseFloat(document.getElementById('dt_n').value) || 0;
-        document.getElementById('dt_s').value = dt;
-        const o = (h/2) - dt;
-        document.getElementById('o_n').value = o.toFixed(4);
-        document.getElementById('o_s').value = o;
-        updatePrint();
+    function sync(p, source) {
+        const s = document.getElementById(p + '_s'), n = document.getElementById(p + '_n');
+        if (source === 'slider') n.value = s.value; else s.value = n.value;
+        if (p === 'dt') document.getElementById('center_v').checked = false;
+        update();
     }
 
     function convertUnits() {
-        const isInch = document.getElementById('unit_type').value === 'in';
-        ['w', 'h', 's', 'o', 'dt'].forEach(id => {
-            const num = document.getElementById(id + '_n');
-            const slider = document.getElementById(id + '_s');
-            let val = parseFloat(num.value) || 0;
-            if (isInch) {
-                val *= MM_TO_IN;
-                slider.step = 0.001;
-                num.value = val.toFixed(4);
-            } else {
-                val *= IN_TO_MM;
-                slider.step = 0.5;
-                num.value = val.toFixed(1);
-            }
-            slider.value = num.value;
+        const newUnit = document.getElementById('unit_type').value;
+        if (newUnit === currentUnit) return;
+        const f = (newUnit === 'in') ? 1/25.4 : 25.4;
+        ['w','h','t','s','dt','dia'].forEach(k => {
+            const n = document.getElementById(k+'_n');
+            const val = (parseFloat(n.value) * f).toFixed(newUnit === 'in' ? 3 : 1);
+            n.value = document.getElementById(k+'_s').value = val;
         });
-        updatePrint();
+        currentUnit = newUnit; update();
     }
 
-    function updatePrint() {
-        const w = parseFloat(document.getElementById('w_n').value) || 0;
-        const h = parseFloat(document.getElementById('h_n').value) || 0;
-        const s = parseFloat(document.getElementById('s_n').value) || 0;
-        const o = parseFloat(document.getElementById('o_n').value) || 0;
-        const dt = parseFloat(document.getElementById('dt_n').value) || 0;
+    function update() {
         const unit = document.getElementById('unit_type').value;
+        const w = parseFloat(document.getElementById('w_n').value) || 1, h = parseFloat(document.getElementById('h_n').value) || 1;
+        const s = parseFloat(document.getElementById('s_n').value) || 0, dia = parseFloat(document.getElementById('dia_n').value) || 0;
+        let dt = parseFloat(document.getElementById('dt_n').value) || 0;
+        const hc = document.getElementById('hole_count').value;
 
-        const f = unit === 'in' ? IN_TO_MM : 1;
+        if (document.getElementById('center_v').checked) {
+            dt = h/2; document.getElementById('dt_n').value = document.getElementById('dt_s').value = dt.toFixed(unit==='in'?3:1);
+        }
+
+        const f = (unit === 'in') ? 25.4 : 1;
         const scale = Math.min(550/(w*f), 350/(h*f)) * 0.8 || 1;
+        const sw = w*f*scale, sh = h*f*scale, ss = s*f*scale, sdt = dt*f*scale, sdia = dia*f*scale;
+        const cx = 400, cy = 300;
+
+        document.getElementById('jaw-body').setAttribute('width', sw); document.getElementById('jaw-body').setAttribute('height', sh);
+        document.getElementById('jaw-body').setAttribute('x', cx-sw/2); document.getElementById('jaw-body').setAttribute('y', cy-sh/2);
+
+        const layer = document.getElementById('holes-layer'); layer.innerHTML = "";
+        const xPos = [cx-ss/2, cx+ss/2]; if (hc === "3") xPos.push(cx);
+        xPos.forEach(x => {
+            const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            c.setAttribute("cx", x); c.setAttribute("cy", cy-sh/2+sdt); c.setAttribute("r", sdia/2);
+            c.setAttribute("class", "hole"); layer.appendChild(c);
+        });
+
+        const drawDim = (txt, x, y, elId, lineId, x1, y1, x2, y2) => {
+            document.getElementById(elId).textContent = txt + unit;
+            document.getElementById(elId).setAttribute('x', x); document.getElementById(elId).setAttribute('y', y);
+            document.getElementById(lineId).setAttribute('x1', x1); document.getElementById(lineId).setAttribute('y1', y1);
+            document.getElementById(lineId).setAttribute('x2', x2); document.getElementById(lineId).setAttribute('y2', y2);
+        };
+
+        drawDim(w, cx, cy-sh/2-55, 'dim-w-text', 'dim-w-line', cx-sw/2, cy-sh/2-45, cx+sw/2, cy-sh/2-45);
+        drawDim(h, -cy, cx-sw/2-55, 'dim-h-text', 'dim-h-line', cx-sw/2-45, cy-sh/2, cx-sw/2-45, cy+sh/2);
+        drawDim("S:"+s, cx, cy+sh/2+65, 'dim-s-text', 'dim-s-line', cx-ss/2, cy+sh/2+45, cx+ss/2, cy+sh/2+45);
         
-        const sw = w * f * scale; const sh = h * f * scale; 
-        const ss = s * f * scale; const so = o * f * scale; const sdt = dt * f * scale;
-        const cx = 400; const cy = 300;
+        document.getElementById('dim-dt-text').textContent = "DT:"+dt;
+        document.getElementById('dim-dt-text').setAttribute('x', cx+sw/2+35);
+        document.getElementById('dim-dt-text').setAttribute('y', cy-sh/2 + sdt/2 + 5);
+        document.getElementById('dim-dt-line').setAttribute('x1', cx+sw/2+25); document.getElementById('dim-dt-line').setAttribute('x2', cx+sw/2+25);
+        document.getElementById('dim-dt-line').setAttribute('y1', cy-sh/2); document.getElementById('dim-dt-line').setAttribute('y2', cy-sh/2+sdt);
 
-        const body = document.getElementById('jaw-body');
-        body.setAttribute('width', sw); body.setAttribute('height', sh);
-        body.setAttribute('x', cx - sw/2); body.setAttribute('y', cy - sh/2);
-
-        document.getElementById('hole-l').setAttribute('cx', cx - ss/2);
-        document.getElementById('hole-l').setAttribute('cy', cy - so);
-        document.getElementById('hole-r').setAttribute('cx', cx + ss/2);
-        document.getElementById('hole-r').setAttribute('cy', cy - so);
-
-        // Visual Distance from Top Line
-        const dtLine = document.getElementById('dim-dt-line');
-        dtLine.setAttribute('x1', cx - ss/2); dtLine.setAttribute('x2', cx - ss/2);
-        dtLine.setAttribute('y1', cy - sh/2); dtLine.setAttribute('y2', cy - so);
-        document.getElementById('dim-dt-text').textContent = `DT: ${dt}`;
-        document.getElementById('dim-dt-text').setAttribute('x', cx - ss/2 + 5);
-        document.getElementById('dim-dt-text').setAttribute('y', cy - sh/2 + sdt/2);
-
-        // Standard Dimensions
-        document.getElementById('dim-w-text').textContent = `W: ${w}${unit}`;
-        document.getElementById('dim-w-line').setAttribute('x1', cx - sw/2); 
-        document.getElementById('dim-w-line').setAttribute('x2', cx + sw/2);
-        document.getElementById('dim-w-line').setAttribute('y1', cy - sh/2 - 40); 
-        document.getElementById('dim-w-line').setAttribute('y2', cy - sh/2 - 40);
-        document.getElementById('dim-w-text').setAttribute('x', cx);
-        document.getElementById('dim-w-text').setAttribute('y', cy - sh/2 - 50);
-
-        document.getElementById('dim-h-text').textContent = `H: ${h}${unit}`;
-        document.getElementById('dim-h-line').setAttribute('x1', cx - sw/2 - 40); 
-        document.getElementById('dim-h-line').setAttribute('x2', cx - sw/2 - 40);
-        document.getElementById('dim-h-line').setAttribute('y1', cy - sh/2); 
-        document.getElementById('dim-h-line').setAttribute('y2', cy + sh/2);
-        document.getElementById('dim-h-text').setAttribute('x', -cy);
-        document.getElementById('dim-h-text').setAttribute('y', cx - sw/2 - 50);
-
-        document.getElementById('dim-s-text').textContent = `S: ${s}${unit}`;
-        const dsL = document.getElementById('dim-s-line');
-        dsL.setAttribute('x1', cx - ss/2); dsL.setAttribute('x2', cx + ss/2);
-        dsL.setAttribute('y1', cy + sh/2 + 40); dsL.setAttribute('y2', cy + sh/2 + 40);
-        document.getElementById('dim-s-text').setAttribute('x', cx);
-        document.getElementById('dim-s-text').setAttribute('y', cy + sh/2 + 60);
+        document.getElementById('tb-brand').innerText = document.getElementById('m_brand').value || "---";
+        document.getElementById('tb-model').innerText = document.getElementById('m_model').value || "---";
+        document.getElementById('tb-thick').innerText = document.getElementById('t_n').value;
+        document.getElementById('tb-unit').innerText = unit.toUpperCase();
+        document.querySelectorAll('.un').forEach(e => e.innerText = unit);
     }
 
-    function generateAndDownloadSTL() {
-        const isInch = document.getElementById('unit_type').value === 'in';
-        const f = isInch ? IN_TO_MM : 1;
-        const w = parseFloat(document.getElementById('w_n').value) * f;
-        const h = parseFloat(document.getElementById('h_n').value) * f;
-        const s = parseFloat(document.getElementById('s_n').value) * f;
-        const o = parseFloat(document.getElementById('o_n').value) * f;
-
+    function generateSTL() {
+        const f = (document.getElementById('unit_type').value === 'in') ? 25.4 : 1;
+        const w = parseFloat(document.getElementById('w_n').value)*f, h = parseFloat(document.getElementById('h_n').value)*f;
+        const t = parseFloat(document.getElementById('t_n').value)*f, s = parseFloat(document.getElementById('s_n').value)*f;
+        const dt = parseFloat(document.getElementById('dt_n').value)*f, dia = parseFloat(document.getElementById('dia_n').value)*f;
+        
         const shape = new THREE.Shape();
-        const x = -w/2, y = -h/2;
-        shape.moveTo(x, y); shape.lineTo(x + w, y); shape.lineTo(x + w, y + h); shape.lineTo(x, y + h); shape.lineTo(x, y);
-
-        const hole1 = new THREE.Path(); hole1.absarc(-s/2, o, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole1);
-        const hole2 = new THREE.Path(); hole2.absarc(s/2, o, 4.5, 0, Math.PI * 2, true); shape.holes.push(hole2);
-
-        const geometry = new THREE.ExtrudeGeometry(shape, { depth: 20, bevelEnabled: false });
-        const mesh = new THREE.Mesh(geometry);
-        const str = (new THREE.STLExporter()).parse(mesh);
-        const blob = new Blob([str], { type: 'text/plain' });
+        shape.moveTo(-w/2, -h/2); shape.lineTo(w/2, -h/2); shape.lineTo(w/2, h/2); shape.lineTo(-w/2, h/2);
+        const xPos = [-s/2, s/2]; if (document.getElementById('hole_count').value === "3") xPos.push(0);
+        xPos.forEach(x => {
+            const hole = new THREE.Path();
+            hole.absarc(x, h/2-dt, dia/2, 0, Math.PI*2, true);
+            shape.holes.push(hole);
+        });
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: t, bevelEnabled: false });
+        const mesh = new THREE.Mesh(geo);
+        const stl = (new THREE.STLExporter()).parse(mesh);
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `vise_jaw_dt.stl`;
-        link.click();
+        link.href = URL.createObjectURL(new Blob([stl], {type:'text/plain'}));
+        link.download = `vise_jaw.stl`; link.click();
     }
-    window.onload = updateDistanceTop;
+
+    window.update = update; window.onload = update;
 </script>
 </body>
 </html>
